@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>💰 Мій фінансовий шлях</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+<style>
+* {box-sizing: border-box;}
+body {
+  background:#0e0e0e; 
+  color:#eee; 
+  font-family:system-ui, -apple-system, sans-serif; 
+  max-width:700px; 
+  margin:auto; 
+  padding:20px;
+}
+h1 {text-align:center; margin-bottom:10px; font-size:28px;}
+h3 {color:#4cff7a; margin-top:30px; font-size:18px;}
+.section {margin:20px 0;}
+.tile {
+  display:flex; 
+  flex-direction:column; 
+  justify-content:center; 
+  align-items:center; 
+  width:150px; 
+  height:110px; 
+  margin:6px; 
+  border-radius:12px; 
+  padding:10px; 
+  background:#181818; 
+  cursor:pointer; 
+  transition:0.3s all; 
+  color:#fff; 
+  font-weight:bold;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+}
+.tile:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.4);
+}
+.tile.jump {animation: jump 0.5s ease forwards;}
+@keyframes jump {
+  0% {transform: translateY(0) scale(1);} 
+  25% {transform: translateY(-15px) scale(1.05);} 
+  50% {transform: translateY(0) scale(1);} 
+  75% {transform: translateY(-8px) scale(1.02);} 
+  100% {transform: translateY(0) scale(1);}
+}
+.tile input {
+  width:90px; 
+  background:#222; 
+  color:#0f0; 
+  border:1px solid #333; 
+  border-radius:6px; 
+  padding:8px; 
+  margin-top:5px; 
+  text-align:center;
+  font-size:14px;
+  font-weight:bold;
+}
+.tile-name {
+  font-size:16px;
+  margin-bottom:4px;
+}
+.tile-remain {
+  font-size:12px;
+  color:#ccc;
+  margin-top:4px;
+}
+.tilesContainer {
+  display:flex; 
+  flex-wrap:wrap; 
+  justify-content:center;
+  margin-top:15px;
+}
+.progress {
+  background:#222; 
+  height:25px; 
+  border-radius:12px; 
+  overflow:hidden; 
+  margin:15px 0; 
+  position:relative;
+  border:1px solid #333;
+}
+.bar {
+  height:100%; 
+  transition:width 0.5s ease; 
+  position:absolute; 
+  top:0; 
+  left:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:12px;
+  font-weight:bold;
+}
+.red {background:#ff5c5c; z-index:1;}
+.big {
+  font-size:36px; 
+  text-align:center; 
+  margin:15px 0;
+  font-weight:bold;
+}
+.negative {color:#ff5c5c;}
+.positive {color:#4cff7a;}
+.small {
+  color:#888; 
+  text-align:center;
+  font-size:14px;
+  margin-bottom:20px;
+}
+.addForm {
+  display:flex;
+  gap:8px;
+  justify-content:center;
+  flex-wrap:wrap;
+  margin-bottom:15px;
+}
+input.newDebt {
+  width:140px; 
+  padding:10px; 
+  border-radius:8px; 
+  border:1px solid #333; 
+  background:#222; 
+  color:#0f0;
+  font-size:14px;
+}
+input.newDebt:focus {
+  outline:none;
+  border-color:#4cff7a;
+}
+button {
+  background:#1f1f1f; 
+  color:#4cff7a; 
+  border:1px solid #333; 
+  padding:10px 20px; 
+  border-radius:8px; 
+  cursor:pointer; 
+  font-weight:bold;
+  transition:0.3s;
+  font-size:14px;
+}
+button:hover {
+  background:#2a2a2a;
+  border-color:#4cff7a;
+}
+button:active {
+  transform:scale(0.95);
+}
+.delete-btn {
+  background:#ff5c5c;
+  color:#fff;
+  padding:4px 8px;
+  margin-top:5px;
+  font-size:11px;
+  border-radius:4px;
+  border:none;
+}
+.delete-btn:hover {
+  background:#ff3030;
+}
+.status {
+  text-align:center;
+  padding:10px;
+  border-radius:8px;
+  margin:10px 0;
+  font-size:13px;
+  font-weight:bold;
+}
+.status.online {
+  background:#1a3a1a;
+  color:#4cff7a;
+}
+.status.offline {
+  background:#3a1a1a;
+  color:#ff5c5c;
+}
+</style>
+</head>
+<body>
+
+<h1>💰 Мій фінансовий шлях</h1>
+
+<div class="status" id="status">🔄 Підключення до Firebase...</div>
+
+<div class="big" id="balance">-77200 ₴</div>
+<div class="small" id="phase">Фаза: закриття боргів</div>
+
+<div class="progress">
+  <div class="bar red" id="debtBar" style="width:0%">0%</div>
+</div>
+
+<div class="section">
+  <h3>➕ Додати новий борг</h3>
+  <div class="addForm">
+    <input class="newDebt" id="newName" placeholder="Ім'я боргу" autocomplete="off">
+    <input class="newDebt" id="newValue" placeholder="Сума" type="number" min="0" step="100">
+    <button onclick="addDebt()">✅ Додати</button>
+  </div>
+</div>
+
+<div class="section">
+  <h3>🔻 Борги та витрати</h3>
+  <div class="tilesContainer" id="debtsTiles">
+    <div style="color:#666; width:100%; text-align:center; padding:20px;">
+      ⏳ Завантаження даних...
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== Firebase config =====
+const firebaseConfig = {
+  apiKey: "AIzaSyDLqI9hCXEVCVQnzWQAr_KsFdUOtxZGMDg",
+  authDomain: "dolg-74757.firebaseapp.com",
+  databaseURL: "https://dolg-74757-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "dolg-74757",
+  storageBucket: "dolg-74757.firebasestorage.app",
+  messagingSenderId: "838632651830",
+  appId: "1:838632651830:web:b76cafc3e1c4b0e73a25e5"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// ===== References =====
+const debtsRef = db.ref("debts");
+const connectedRef = db.ref(".info/connected");
+
+// ===== DOM Elements =====
+const debtsTiles = document.getElementById("debtsTiles");
+const balanceDiv = document.getElementById("balance");
+const phaseDiv = document.getElementById("phase");
+const debtBar = document.getElementById("debtBar");
+const statusDiv = document.getElementById("status");
+
+// ===== Initial data - добавляется только при первом запуске =====
+const initialDebts = [
+  { name: "Діма", value: 44500, paid: 0 },
+  { name: "Влад", value: 3000, paid: 0 },
+  { name: "Костя", value: 2500, paid: 0 },
+  { name: "Альона", value: 2000, paid: 0 },
+  { name: "Максим", value: 2000, paid: 0 },
+  { name: "Андрій", value: 1000, paid: 0 },
+  { name: "Кредит", value: 5000, paid: 0 },
+  { name: "Очі", value: 4000, paid: 0 },
+  { name: "Ботокс", value: 5700, paid: 0 },
+  { name: "Губи", value: 5500, paid: 0 },
+  { name: "Мезотерапія", value: 2000, paid: 0 }
+];
+
+// ===== Initialize data once =====
+debtsRef.once("value").then(snap => {
+  const existing = snap.val();
+  if (!existing || Object.keys(existing).length === 0) {
+    console.log("✅ Ініціалізація початкових даних...");
+    initialDebts.forEach(debt => {
+      debtsRef.push({
+        ...debt,
+        created: Date.now()
+      });
+    });
+  } else {
+    console.log("✅ Дані вже існують");
+  }
+});
+
+// ===== Connection status =====
+connectedRef.on("value", (snap) => {
+  if (snap.val() === true) {
+    statusDiv.className = "status online";
+    statusDiv.textContent = "🟢 Онлайн - синхронізація активна на всіх пристроях";
+  } else {
+    statusDiv.className = "status offline";
+    statusDiv.textContent = "🔴 Офлайн - перевірте інтернет";
+  }
+});
+
+// ===== Render function =====
+function render(debts) {
+  if (debts.length === 0) {
+    debtsTiles.innerHTML = '<div style="color:#666; width:100%; text-align:center; padding:20px;">Немає боргів. Додайте перший!</div>';
+    balanceDiv.textContent = "0 ₴";
+    phaseDiv.textContent = "Додайте борги для відстеження";
+    debtBar.style.width = "0%";
+    debtBar.textContent = "0%";
+    return;
+  }
+
+  let debtSum = debts.reduce((s, d) => s + d.paid, 0);
+  let totalDebt = debts.reduce((s, d) => s + d.value, 0);
+  let balance = -totalDebt + debtSum;
+
+  // Update balance
+  balanceDiv.textContent = balance.toLocaleString('uk-UA') + " ₴";
+  balanceDiv.className = "big " + (balance < 0 ? "negative" : balance === 0 ? "" : "positive");
+  
+  // Update phase
+  if (balance < 0) {
+    phaseDiv.textContent = "Фаза: закриття боргів";
+  } else if (balance === 0) {
+    phaseDiv.textContent = "⚖️ Фаза: нульовий баланс";
+  } else {
+    phaseDiv.textContent = "📈 Фаза: накопичення на квартиру (ціль 45 000 ₴)";
+  }
+
+  // Update progress bar
+  const percent = totalDebt > 0 ? Math.round((debtSum / totalDebt * 100)) : 0;
+  debtBar.style.width = percent + "%";
+  debtBar.textContent = percent + "%";
+
+  // Render debt tiles
+  debtsTiles.innerHTML = "";
+  debts.forEach((d, i) => {
+    const remain = d.value - d.paid;
+    const tilePercent = d.paid / d.value * 100;
+    
+    let color = "#181818";
+    if (tilePercent === 100) color = "#4cff7a";
+    else if (tilePercent > 0) color = "#ffcc00";
+    else color = "#ff5c5c";
+
+    const tile = document.createElement("div");
+    tile.className = "tile";
+    tile.style.background = color;
+    
+    tile.innerHTML = `
+      <div class="tile-name">${d.name}</div>
+      <input type="number" min="0" max="${d.value}" value="${d.paid}" 
+             onchange="updateDebt('${d.id}', this.value)">
+      <div class="tile-remain">Залишок: ${remain.toLocaleString('uk-UA')} ₴</div>
+      <button class="delete-btn" onclick="deleteDebt('${d.id}')">🗑️</button>
+    `;
+
+    if (tilePercent === 100) {
+      setTimeout(() => {
+        tile.classList.add("jump");
+        setTimeout(() => tile.classList.remove("jump"), 500);
+      }, 50 * i);
+    }
+
+    debtsTiles.appendChild(tile);
+  });
+}
+
+// ===== Firebase listeners - REALTIME SYNC =====
+debtsRef.on("value", snap => {
+  const debtsObj = snap.val() || {};
+  const debts = Object.keys(debtsObj).map(k => ({ id: k, ...debtsObj[k] }));
+  render(debts);
+});
+
+// ===== Functions =====
+function updateDebt(id, val) {
+  val = Number(val) || 0;
+  debtsRef.child(id).update({ paid: val });
+}
+
+function addDebt() {
+  const name = document.getElementById("newName").value.trim();
+  const value = Number(document.getElementById("newValue").value);
+  
+  if (!name || !value) {
+    alert("⚠️ Введіть ім'я та суму боргу!");
+    return;
+  }
+  
+  if (value <= 0) {
+    alert("⚠️ Сума має бути більше нуля!");
+    return;
+  }
+  
+  debtsRef.push({ 
+    name: name, 
+    value: value, 
+    paid: 0,
+    created: Date.now()
+  });
+  
+  document.getElementById("newName").value = "";
+  document.getElementById("newValue").value = "";
+  document.getElementById("newName").focus();
+}
+
+function deleteDebt(id) {
+  if (confirm("❌ Видалити цей борг назавжди?")) {
+    debtsRef.child(id).remove();
+  }
+}
+
+// ===== Keyboard shortcuts =====
+document.getElementById("newName").addEventListener("keypress", (e) => {
+  if (e.key === "Enter") {
+    document.getElementById("newValue").focus();
+  }
+});
+
+document.getElementById("newValue").addEventListener("keypress", (e) => {
+  if (e.key === "Enter") {
+    addDebt();
+  }
+});
+
+console.log("🚀 Додаток запущено!");
+console.log("📱 Синхронізація працює на всіх пристроях");
+</script>
+</body>
+</html>
